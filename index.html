@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3개년 재무제표 비교 — 삼성전자·SK하이닉스·LG전자</title>
+<title>재무제표 비교 — DART Open API</title>
 <style>
   :root{
     --bg:#F1F3F6;
@@ -14,41 +14,31 @@
     --border:#D8DEE7;
     --accent:#2C4570;
     --accent-soft:#DCE4F0;
-    --c-samsung:#33518C;
-    --c-skhynix:#B5701F;
-    --c-lge:#1F7A63;
+    --series-1:#33518C;
+    --series-2:#B5701F;
+    --series-3:#1F7A63;
     --pos:#1E8E5A;
     --neg:#C1432E;
     --shadow: 0 1px 2px rgba(23,27,34,0.06), 0 8px 24px -12px rgba(23,27,34,0.12);
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#0F121A;
-      --surface:#171B24;
-      --surface-alt:#1E2330;
-      --ink:#E8EBF1;
-      --ink-muted:#98A1B0;
-      --border:#2A303D;
-      --accent:#87A6DE;
-      --accent-soft:#22304C;
-      --c-samsung:#87A6DE;
-      --c-skhynix:#E3A459;
-      --c-lge:#5FC1A4;
-      --pos:#4CC38A;
-      --neg:#E37272;
+      --bg:#0F121A; --surface:#171B24; --surface-alt:#1E2330; --ink:#E8EBF1; --ink-muted:#98A1B0;
+      --border:#2A303D; --accent:#87A6DE; --accent-soft:#22304C;
+      --series-1:#87A6DE; --series-2:#E3A459; --series-3:#5FC1A4; --pos:#4CC38A; --neg:#E37272;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
     }
   }
   :root[data-theme="dark"]{
     --bg:#0F121A; --surface:#171B24; --surface-alt:#1E2330; --ink:#E8EBF1; --ink-muted:#98A1B0;
     --border:#2A303D; --accent:#87A6DE; --accent-soft:#22304C;
-    --c-samsung:#87A6DE; --c-skhynix:#E3A459; --c-lge:#5FC1A4; --pos:#4CC38A; --neg:#E37272;
+    --series-1:#87A6DE; --series-2:#E3A459; --series-3:#5FC1A4; --pos:#4CC38A; --neg:#E37272;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
   }
   :root[data-theme="light"]{
     --bg:#F1F3F6; --surface:#FFFFFF; --surface-alt:#E7EBF1; --ink:#171B22; --ink-muted:#565F6D;
     --border:#D8DEE7; --accent:#2C4570; --accent-soft:#DCE4F0;
-    --c-samsung:#33518C; --c-skhynix:#B5701F; --c-lge:#1F7A63; --pos:#1E8E5A; --neg:#C1432E;
+    --series-1:#33518C; --series-2:#B5701F; --series-3:#1F7A63; --pos:#1E8E5A; --neg:#C1432E;
     --shadow: 0 1px 2px rgba(23,27,34,0.06), 0 8px 24px -12px rgba(23,27,34,0.12);
   }
 
@@ -60,6 +50,7 @@
     line-height:1.5;
   }
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+  button{font-family:inherit;}
 
   .wrap{max-width:1080px; margin:0 auto; padding:40px 24px 64px;}
 
@@ -78,27 +69,92 @@
     font-family:Georgia,"Noto Serif KR",serif;
   }
   .subtitle{color:var(--ink-muted); font-size:14.5px; margin-top:2px;}
-  .meta-row{
-    display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:14px;
-    font-size:12.5px; color:var(--ink-muted);
-  }
-  .meta-row b{color:var(--ink); font-weight:600;}
 
   section{margin-bottom:40px;}
   .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; gap:12px; flex-wrap:wrap;}
   .section-head h2{font-size:16px; margin:0; font-weight:700;}
   .section-head .hint{font-size:12.5px; color:var(--ink-muted);}
 
+  /* ---- search panel ---- */
+  .search-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:20px 22px; box-shadow:var(--shadow);
+  }
+  .search-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+  .search-box{position:relative; flex:1 1 320px; min-width:240px;}
+  .search-box input[type="text"]{
+    width:100%; padding:10px 14px; font-size:14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg); color:var(--ink);
+    outline:none;
+  }
+  .search-box input[type="text"]:focus{border-color:var(--accent);}
+  .suggestions{
+    position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); max-height:280px; overflow-y:auto; display:none;
+  }
+  .suggestions.open{display:block;}
+  .suggestion-item{
+    display:flex; justify-content:space-between; gap:10px; align-items:center;
+    padding:9px 14px; cursor:pointer; font-size:13.5px;
+  }
+  .suggestion-item:hover, .suggestion-item.active{background:var(--surface-alt);}
+  .suggestion-item .code{color:var(--ink-muted); font-size:11.5px;}
+  .suggestion-empty{padding:14px; font-size:13px; color:var(--ink-muted);}
+
+  .year-fields{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-muted);}
+  .year-fields input{
+    width:72px; padding:10px 10px; font-size:14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg); color:var(--ink); text-align:center;
+  }
+  .btn-primary{
+    padding:10px 20px; font-size:14px; font-weight:700; border-radius:8px; border:none;
+    background:var(--accent); color:var(--surface); cursor:pointer;
+  }
+  .btn-primary:disabled{opacity:.45; cursor:not-allowed;}
+  .btn-primary:not(:disabled):hover{filter:brightness(1.08);}
+
+  .chip-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; min-height:0;}
+  .chip{
+    display:flex; align-items:center; gap:7px; padding:6px 8px 6px 12px; border-radius:999px;
+    background:var(--accent-soft); font-size:13px; font-weight:600; color:var(--ink);
+    border-left:3px solid var(--chip-color, var(--accent));
+  }
+  .chip .code{color:var(--ink-muted); font-weight:400; font-size:11.5px;}
+  .chip button{
+    border:none; background:transparent; color:var(--ink-muted); cursor:pointer;
+    width:18px; height:18px; border-radius:50%; font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .chip button:hover{background:rgba(0,0,0,0.08); color:var(--neg);}
+  .search-hint{font-size:12px; color:var(--ink-muted); margin-top:10px;}
+
+  /* ---- states ---- */
+  .empty-state, .error-banner{
+    background:var(--surface); border:1px dashed var(--border); border-radius:12px;
+    padding:32px 20px; text-align:center; color:var(--ink-muted); font-size:13.5px;
+  }
+  .error-banner{border-style:solid; border-color:var(--neg); color:var(--neg); text-align:left;}
+  .loading-row{display:flex; align-items:center; gap:10px; color:var(--ink-muted); font-size:13.5px; padding:16px 4px;}
+  .spinner{
+    width:15px; height:15px; border-radius:50%; border:2px solid var(--border);
+    border-top-color:var(--accent); animation:spin .7s linear infinite; flex:none;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  @media (prefers-reduced-motion: reduce){ .spinner{animation:none;} }
+
+  #resultsArea{display:none;}
+  #resultsArea.visible{display:block;}
+
   /* KPI cards */
-  .kpi-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
-  @media (max-width:760px){ .kpi-grid{grid-template-columns:1fr;} }
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px;}
   .kpi-card{
     background:var(--surface); border:1px solid var(--border); border-radius:10px;
     padding:18px 20px; box-shadow:var(--shadow);
     border-top:3px solid var(--company-color, var(--accent));
   }
   .kpi-card .co-name{font-weight:800; font-size:15.5px; display:flex; align-items:center; gap:8px;}
-  .co-dot{width:9px;height:9px;border-radius:50%; background:var(--company-color);}
+  .co-dot{width:9px;height:9px;border-radius:50%; background:var(--company-color); flex:none;}
   .kpi-card .co-code{font-size:11.5px; color:var(--ink-muted); font-weight:400; margin-left:2px;}
   .kpi-list{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:9px;}
   .kpi-list li{display:flex; justify-content:space-between; align-items:baseline; font-size:13.5px;}
@@ -124,7 +180,6 @@
   svg text{font-family:inherit; fill:var(--ink);}
   .axis-label{fill:var(--ink-muted) !important; font-size:10.5px;}
   .grid-line{stroke:var(--border);}
-  .bar-label{font-size:10px; fill:var(--ink-muted) !important;}
 
   /* table */
   .table-scroll{overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--shadow);}
@@ -159,133 +214,356 @@
 <div class="wrap">
   <header class="masthead">
     <div class="eyebrow">Financial Statement Comparison · DART Open API</div>
-    <h1>3개년 재무제표 비교</h1>
-    <div class="subtitle">삼성전자 · SK하이닉스 · LG전자 — 연결재무제표 기준, 2023~2025 사업연도</div>
-    <div class="meta-row">
-      <span>데이터 출처 <b>금융감독원 전자공시시스템(DART)</b></span>
-      <span>API <b>fnlttSinglAcntAll</b></span>
-      <span>보고서 <b>사업보고서(11011)</b></span>
-      <span>생성 <b>2026-07-11</b></span>
-    </div>
+    <h1>재무제표 비교</h1>
+    <div class="subtitle">회사명을 검색해 최대 3곳을 선택하면 연결재무제표 기준 다년간 비교를 보여줍니다.</div>
   </header>
 
-  <section id="kpi-section">
-    <div class="section-head">
-      <h2>2025 사업연도 스냅샷</h2>
-      <span class="hint">전년(2024) 대비 증감률 표기</span>
-    </div>
-    <div class="kpi-grid" id="kpiGrid"></div>
-  </section>
-
   <section>
     <div class="section-head">
-      <h2>추이 비교</h2>
-      <span class="hint">2023 → 2025</span>
+      <h2>회사 검색</h2>
+      <span class="hint" id="corpListStatus">상장사 목록 불러오는 중…</span>
     </div>
-    <div class="chart-grid">
-      <div class="chart-card">
-        <h3>매출액 추이</h3>
-        <div class="chart-sub">단위: 조원</div>
-        <svg id="revChart" viewBox="0 0 460 220" role="img" aria-labelledby="revTitle"></svg>
-        <div id="revLegend" class="legend"></div>
+    <div class="search-card">
+      <div class="search-row">
+        <div class="search-box">
+          <label for="searchInput" class="sr-only">회사명 검색</label>
+          <input type="text" id="searchInput" placeholder="회사명을 입력하세요 (예: 삼성전자)" autocomplete="off" disabled>
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+        <div class="year-fields">
+          <span>기간</span>
+          <input type="number" id="startYear" aria-label="시작 연도">
+          <span>–</span>
+          <input type="number" id="endYear" aria-label="종료 연도">
+        </div>
+        <button class="btn-primary" id="compareBtn" disabled>비교하기</button>
       </div>
-      <div class="chart-card">
-        <h3>영업이익률 추이</h3>
-        <div class="chart-sub">단위: %</div>
-        <svg id="marginChart" viewBox="0 0 400 220" role="img" aria-labelledby="marginTitle"></svg>
-        <div id="marginLegend" class="legend"></div>
-      </div>
+      <div class="chip-row" id="chipRow"></div>
+      <div class="search-hint">최대 3개 회사까지 선택할 수 있습니다. 상장사만 검색됩니다.</div>
     </div>
   </section>
 
-  <section>
-    <div class="section-head">
-      <h2>전체 비교표</h2>
-      <span class="hint">열 머리글 클릭 시 정렬</span>
-    </div>
-    <div class="table-scroll">
-      <table id="dataTable">
-        <thead>
-          <tr>
-            <th data-key="회사명" data-type="str">회사<span class="arrow">↕</span></th>
-            <th data-key="연도" data-type="num">연도<span class="arrow">↕</span></th>
-            <th data-key="재무제표구분" data-type="str">구분<span class="arrow">↕</span></th>
-            <th data-key="매출액" data-type="num">매출액(조원)<span class="arrow">↕</span></th>
-            <th data-key="영업이익" data-type="num">영업이익(조원)<span class="arrow">↕</span></th>
-            <th data-key="당기순이익" data-type="num">당기순이익(조원)<span class="arrow">↕</span></th>
-            <th data-key="자산총계" data-type="num">자산총계(조원)<span class="arrow">↕</span></th>
-            <th data-key="부채총계" data-type="num">부채총계(조원)<span class="arrow">↕</span></th>
-            <th data-key="자본총계" data-type="num">자본총계(조원)<span class="arrow">↕</span></th>
-            <th data-key="영업이익률(%)" data-type="num">영업이익률<span class="arrow">↕</span></th>
-            <th data-key="순이익률(%)" data-type="num">순이익률<span class="arrow">↕</span></th>
-            <th data-key="부채비율(%)" data-type="num">부채비율<span class="arrow">↕</span></th>
-            <th data-key="ROE(%)" data-type="num">ROE<span class="arrow">↕</span></th>
-            <th data-key="ROA(%)" data-type="num">ROA<span class="arrow">↕</span></th>
-          </tr>
-        </thead>
-        <tbody id="dataBody"></tbody>
-      </table>
-    </div>
-  </section>
+  <div id="loadingRow" class="loading-row" style="display:none;">
+    <span class="spinner" aria-hidden="true"></span>
+    <span id="loadingText">DART에서 재무제표를 불러오는 중…</span>
+  </div>
+  <div id="errorBanner" class="error-banner" style="display:none;"></div>
+  <div id="emptyState" class="empty-state">회사를 검색해 선택한 뒤 <b>비교하기</b>를 눌러주세요.</div>
+
+  <div id="resultsArea">
+    <section id="kpi-section">
+      <div class="section-head">
+        <h2 id="kpiHeading">최신 연도 스냅샷</h2>
+        <span class="hint" id="kpiHint"></span>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>추이 비교</h2>
+        <span class="hint" id="trendHint"></span>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>매출액 추이</h3>
+          <div class="chart-sub">단위: 조원</div>
+          <svg id="revChart" viewBox="0 0 460 220" role="img" aria-label="매출액 추이 막대그래프"></svg>
+          <div id="revLegend" class="legend"></div>
+        </div>
+        <div class="chart-card">
+          <h3>영업이익률 추이</h3>
+          <div class="chart-sub">단위: %</div>
+          <svg id="marginChart" viewBox="0 0 400 220" role="img" aria-label="영업이익률 추이 선그래프"></svg>
+          <div id="marginLegend" class="legend"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>전체 비교표</h2>
+        <span class="hint">열 머리글 클릭 시 정렬</span>
+      </div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th data-key="회사명" data-type="str">회사<span class="arrow">↕</span></th>
+              <th data-key="연도" data-type="num">연도<span class="arrow">↕</span></th>
+              <th data-key="재무제표구분" data-type="str">구분<span class="arrow">↕</span></th>
+              <th data-key="매출액" data-type="num">매출액(조원)<span class="arrow">↕</span></th>
+              <th data-key="영업이익" data-type="num">영업이익(조원)<span class="arrow">↕</span></th>
+              <th data-key="당기순이익" data-type="num">당기순이익(조원)<span class="arrow">↕</span></th>
+              <th data-key="자산총계" data-type="num">자산총계(조원)<span class="arrow">↕</span></th>
+              <th data-key="부채총계" data-type="num">부채총계(조원)<span class="arrow">↕</span></th>
+              <th data-key="자본총계" data-type="num">자본총계(조원)<span class="arrow">↕</span></th>
+              <th data-key="영업이익률(%)" data-type="num">영업이익률<span class="arrow">↕</span></th>
+              <th data-key="순이익률(%)" data-type="num">순이익률<span class="arrow">↕</span></th>
+              <th data-key="부채비율(%)" data-type="num">부채비율<span class="arrow">↕</span></th>
+              <th data-key="ROE(%)" data-type="num">ROE<span class="arrow">↕</span></th>
+              <th data-key="ROA(%)" data-type="num">ROA<span class="arrow">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
   <footer>
-    <div>ⓘ LG전자 2023년 당기순이익/순이익률/ROE/ROA는 계정과목명 표기 차이로 자동 추출되지 않아 공란(—)으로 표시했습니다.</div>
+    <div>ⓘ 계정과목명 표기가 다른 일부 회사·연도는 특정 지표가 공란(—)으로 표시될 수 있습니다.</div>
     <div>본 리포트는 학습·연습 목적의 재무분석기 산출물이며, 투자 판단의 근거로 사용할 수 없습니다.</div>
   </footer>
 </div>
 
 <script>
-const DATA = [
-  {"회사명":"삼성전자","종목코드":"005930","연도":2023,"재무제표구분":"연결","매출액":258935494000000.0,"영업이익":6566976000000.0,"당기순이익":15487100000000.0,"자산총계":455905980000000.0,"부채총계":92228115000000.0,"자본총계":363677865000000.0,"영업이익률(%)":2.54,"순이익률(%)":5.98,"부채비율(%)":25.36,"ROE(%)":4.26,"ROA(%)":3.40},
-  {"회사명":"삼성전자","종목코드":"005930","연도":2024,"재무제표구분":"연결","매출액":300870903000000.0,"영업이익":32725961000000.0,"당기순이익":34451351000000.0,"자산총계":514531948000000.0,"부채총계":112339878000000.0,"자본총계":402192070000000.0,"영업이익률(%)":10.88,"순이익률(%)":11.45,"부채비율(%)":27.93,"ROE(%)":8.57,"ROA(%)":6.70},
-  {"회사명":"삼성전자","종목코드":"005930","연도":2025,"재무제표구분":"연결","매출액":333605938000000.0,"영업이익":43601051000000.0,"당기순이익":45206805000000.0,"자산총계":566942110000000.0,"부채총계":130621773000000.0,"자본총계":436320337000000.0,"영업이익률(%)":13.07,"순이익률(%)":13.55,"부채비율(%)":29.94,"ROE(%)":10.36,"ROA(%)":7.97},
-  {"회사명":"SK하이닉스","종목코드":"000660","연도":2023,"재무제표구분":"연결","매출액":32765719000000.0,"영업이익":-7730313000000.0,"당기순이익":-9137547000000.0,"자산총계":100330165000000.0,"부채총계":46826413000000.0,"자본총계":53503752000000.0,"영업이익률(%)":-23.59,"순이익률(%)":-27.89,"부채비율(%)":87.52,"ROE(%)":-17.08,"ROA(%)":-9.11},
-  {"회사명":"SK하이닉스","종목코드":"000660","연도":2024,"재무제표구분":"연결","매출액":66192960000000.0,"영업이익":23467319000000.0,"당기순이익":19796902000000.0,"자산총계":119855209000000.0,"부채총계":45939505000000.0,"자본총계":73915704000000.0,"영업이익률(%)":35.45,"순이익률(%)":29.91,"부채비율(%)":62.15,"ROE(%)":26.78,"ROA(%)":16.52},
-  {"회사명":"SK하이닉스","종목코드":"000660","연도":2025,"재무제표구분":"연결","매출액":97146675000000.0,"영업이익":47206319000000.0,"당기순이익":42947902000000.0,"자산총계":176107659000000.0,"부채총계":55440908000000.0,"자본총계":120666751000000.0,"영업이익률(%)":48.59,"순이익률(%)":44.21,"부채비율(%)":45.95,"ROE(%)":35.59,"ROA(%)":24.39},
-  {"회사명":"LG전자","종목코드":"066570","연도":2023,"재무제표구분":"연결","매출액":84227765000000.0,"영업이익":3549074000000.0,"당기순이익":null,"자산총계":60240793000000.0,"부채총계":36742257000000.0,"자본총계":23498536000000.0,"영업이익률(%)":4.21,"순이익률(%)":null,"부채비율(%)":156.36,"ROE(%)":null,"ROA(%)":null},
-  {"회사명":"LG전자","종목코드":"066570","연도":2024,"재무제표구분":"연결","매출액":87728182000000.0,"영업이익":3419675000000.0,"당기순이익":591365000000.0,"자산총계":65629589000000.0,"부채총계":40417925000000.0,"자본총계":25211664000000.0,"영업이익률(%)":3.90,"순이익률(%)":0.67,"부채비율(%)":160.31,"ROE(%)":2.35,"ROA(%)":0.90},
-  {"회사명":"LG전자","종목코드":"066570","연도":2025,"재무제표구분":"연결","매출액":89200882000000.0,"영업이익":2478392000000.0,"당기순이익":1220412000000.0,"자산총계":68620167000000.0,"부채총계":40068142000000.0,"자본총계":28552025000000.0,"영업이익률(%)":2.78,"순이익률(%)":1.37,"부채비율(%)":140.33,"ROE(%)":4.27,"ROA(%)":1.78}
-];
+const SERIES_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
+const MAX_SELECT = 3;
 
-const COMPANIES = ["삼성전자","SK하이닉스","LG전자"];
-const COLOR = {"삼성전자":"var(--c-samsung)","SK하이닉스":"var(--c-skhynix)","LG전자":"var(--c-lge)"};
-const YEARS = [2023,2024,2025];
+let corpList = [];          // [[name, corp_code, stock_code], ...]
+let selected = [];          // [{corp_name, corp_code, stock_code}]
+let DATA = [];              // fetched records, flattened across companies
+let activeSuggestionIndex = -1;
+
+const $ = (id) => document.getElementById(id);
+const searchInput = $("searchInput");
+const suggestionsEl = $("suggestions");
+const chipRow = $("chipRow");
+const compareBtn = $("compareBtn");
+const startYearInput = $("startYear");
+const endYearInput = $("endYear");
+
+/* ---------- init ---------- */
+(function initYears(){
+  const now = new Date();
+  const endYear = now.getFullYear() - 1;
+  startYearInput.value = endYear - 2;
+  endYearInput.value = endYear;
+})();
+
+fetch("corp_list.json")
+  .then(r => r.json())
+  .then(list => {
+    corpList = list;
+    searchInput.disabled = false;
+    $("corpListStatus").textContent = `상장사 ${list.length.toLocaleString("ko-KR")}곳 검색 가능`;
+  })
+  .catch(() => {
+    $("corpListStatus").textContent = "상장사 목록을 불러오지 못했습니다. 새로고침해 주세요.";
+  });
+
+/* ---------- search ---------- */
+function colorFor(index){ return SERIES_COLORS[index % SERIES_COLORS.length]; }
+
+function renderSuggestions(items){
+  activeSuggestionIndex = -1;
+  if(items.length === 0){
+    suggestionsEl.innerHTML = `<div class="suggestion-empty">검색 결과가 없습니다.</div>`;
+    suggestionsEl.classList.add("open");
+    return;
+  }
+  suggestionsEl.innerHTML = items.map((c,i) => `
+    <div class="suggestion-item" data-idx="${i}" role="option">
+      <span>${c[0]}</span><span class="code">${c[2]}</span>
+    </div>`).join("");
+  suggestionsEl.classList.add("open");
+  suggestionsEl._items = items;
+}
+
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.trim();
+  if(q.length === 0 || selected.length >= MAX_SELECT){
+    suggestionsEl.classList.remove("open");
+    return;
+  }
+  const already = new Set(selected.map(s => s.corp_code));
+  const matches = corpList
+    .filter(c => c[0].includes(q) && !already.has(c[1]))
+    .slice(0, 8);
+  renderSuggestions(matches);
+});
+
+searchInput.addEventListener("focus", () => {
+  if(searchInput.value.trim() && suggestionsEl.innerHTML) suggestionsEl.classList.add("open");
+});
+
+document.addEventListener("click", (e) => {
+  if(!e.target.closest(".search-box")) suggestionsEl.classList.remove("open");
+});
+
+suggestionsEl.addEventListener("click", (e) => {
+  const item = e.target.closest(".suggestion-item");
+  if(!item) return;
+  const idx = Number(item.dataset.idx);
+  const picked = suggestionsEl._items[idx];
+  if(picked) addCompany(picked);
+});
+
+searchInput.addEventListener("keydown", (e) => {
+  const items = suggestionsEl.querySelectorAll(".suggestion-item");
+  if(e.key === "ArrowDown"){
+    e.preventDefault();
+    activeSuggestionIndex = Math.min(activeSuggestionIndex+1, items.length-1);
+    items.forEach((el,i)=>el.classList.toggle("active", i===activeSuggestionIndex));
+  } else if(e.key === "ArrowUp"){
+    e.preventDefault();
+    activeSuggestionIndex = Math.max(activeSuggestionIndex-1, 0);
+    items.forEach((el,i)=>el.classList.toggle("active", i===activeSuggestionIndex));
+  } else if(e.key === "Enter"){
+    e.preventDefault();
+    if(activeSuggestionIndex >= 0 && suggestionsEl._items[activeSuggestionIndex]){
+      addCompany(suggestionsEl._items[activeSuggestionIndex]);
+    }
+  } else if(e.key === "Escape"){
+    suggestionsEl.classList.remove("open");
+  }
+});
+
+function addCompany(entry){
+  const [corp_name, corp_code, stock_code] = entry;
+  if(selected.length >= MAX_SELECT) return;
+  if(selected.some(s => s.corp_code === corp_code)) return;
+  selected.push({corp_name, corp_code, stock_code});
+  searchInput.value = "";
+  suggestionsEl.classList.remove("open");
+  renderChips();
+}
+
+function removeCompany(corp_code){
+  selected = selected.filter(s => s.corp_code !== corp_code);
+  renderChips();
+}
+
+function renderChips(){
+  chipRow.innerHTML = selected.map((s,i) => `
+    <span class="chip" style="--chip-color:${colorFor(i)}">
+      <span class="co-dot" style="background:${colorFor(i)}"></span>
+      ${s.corp_name} <span class="code">${s.stock_code}</span>
+      <button type="button" aria-label="${s.corp_name} 선택 해제" data-code="${s.corp_code}">✕</button>
+    </span>`).join("");
+  chipRow.querySelectorAll("button[data-code]").forEach(btn=>{
+    btn.addEventListener("click", () => removeCompany(btn.dataset.code));
+  });
+  compareBtn.disabled = selected.length === 0;
+  searchInput.placeholder = selected.length >= MAX_SELECT
+    ? "최대 3개까지 선택했습니다"
+    : "회사명을 입력하세요 (예: 삼성전자)";
+}
+
+/* ---------- fetch & compare ---------- */
+compareBtn.addEventListener("click", runCompare);
+
+async function runCompare(){
+  const start = parseInt(startYearInput.value, 10);
+  const end = parseInt(endYearInput.value, 10);
+  if(!start || !end || end < start){
+    showError("조회 기간을 올바르게 입력해 주세요.");
+    return;
+  }
+
+  $("emptyState").style.display = "none";
+  $("errorBanner").style.display = "none";
+  $("resultsArea").classList.remove("visible");
+  $("loadingRow").style.display = "flex";
+  compareBtn.disabled = true;
+
+  try{
+    const results = await Promise.all(selected.map(s =>
+      fetch(`/api/financials?corp_code=${encodeURIComponent(s.corp_code)}&corp_name=${encodeURIComponent(s.corp_name)}&start=${start}&end=${end}`)
+        .then(async r => {
+          const body = await r.json();
+          if(!r.ok) throw new Error(`${s.corp_name}: ${body.error || "조회 실패"}`);
+          return body;
+        })
+    ));
+
+    DATA = results.flatMap(r => r.records);
+    if(DATA.length === 0){
+      showError("선택한 회사·기간에 해당하는 재무제표 데이터가 없습니다. 상장 이력이나 사업보고서 제출 여부를 확인해 주세요.");
+      return;
+    }
+    renderResults();
+    $("resultsArea").classList.add("visible");
+  } catch(err){
+    showError(err.message || String(err));
+  } finally{
+    $("loadingRow").style.display = "none";
+    compareBtn.disabled = selected.length === 0;
+  }
+}
+
+function showError(msg){
+  const el = $("errorBanner");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+/* ---------- rendering ---------- */
+const COLOR = {};
+function assignColors(){
+  selected.forEach((s,i) => { COLOR[s.corp_name] = colorFor(i); });
+}
 
 const jo = v => v===null||v===undefined ? null : v/1e12;
 const fmtJo = v => v===null||v===undefined ? "—" : (v>=0?"":"−") + Math.abs(v).toFixed(1) + "조";
 
+function companyNames(){ return [...new Set(DATA.map(d=>d["회사명"]))]; }
+function years(){ return [...new Set(DATA.map(d=>d["연도"]))].sort(); }
 function byCoYear(co,yr){ return DATA.find(d=>d["회사명"]===co && d["연도"]===yr); }
 
-/* ---------- KPI cards ---------- */
-const kpiGrid = document.getElementById("kpiGrid");
-COMPANIES.forEach(co=>{
-  const cur = byCoYear(co,2025), prev = byCoYear(co,2024);
-  const growth = (curV,prevV) => (curV==null||prevV==null||prevV===0) ? null : (curV-prevV)/Math.abs(prevV)*100;
-  const revG = growth(cur["매출액"],prev["매출액"]);
-  const opG = growth(cur["영업이익"],prev["영업이익"]);
+function renderResults(){
+  assignColors();
+  const cos = companyNames();
+  const yrs = years();
+  const latest = yrs[yrs.length-1];
+  const prev = yrs.length>1 ? yrs[yrs.length-2] : null;
 
-  const card = document.createElement("div");
-  card.className = "kpi-card";
-  card.style.setProperty("--company-color", COLOR[co]);
-  card.innerHTML = `
-    <div class="co-name"><span class="co-dot"></span>${co} <span class="co-code">${cur["종목코드"]}</span></div>
-    <ul class="kpi-list">
-      <li><span class="label">매출액</span><span class="value big">${fmtJo(jo(cur["매출액"]))}${revG!=null?`<span class="delta ${revG>=0?'up':'down'}">${revG>=0?'▲':'▼'} ${Math.abs(revG).toFixed(1)}%</span>`:''}</span></li>
-      <li><span class="label">영업이익</span><span class="value">${fmtJo(jo(cur["영업이익"]))}${opG!=null?`<span class="delta ${opG>=0?'up':'down'}">${opG>=0?'▲':'▼'} ${Math.abs(opG).toFixed(1)}%</span>`:''}</span></li>
-      <li><span class="label">당기순이익</span><span class="value">${fmtJo(jo(cur["당기순이익"]))}</span></li>
-      <li><span class="label">부채비율</span><span class="value">${cur["부채비율(%)"]!=null?cur["부채비율(%)"].toFixed(1)+'%':'—'}</span></li>
-    </ul>`;
-  kpiGrid.appendChild(card);
-});
+  $("kpiHeading").textContent = `${latest} 사업연도 스냅샷`;
+  $("kpiHint").textContent = prev ? `전년(${prev}) 대비 증감률 표기` : "";
+  $("trendHint").textContent = `${yrs[0]} → ${latest}`;
 
-/* ---------- Revenue grouped bar chart ---------- */
-(function(){
-  const svg = document.getElementById("revChart");
+  renderKpiCards(cos, latest, prev);
+  renderRevenueChart(cos, yrs);
+  renderMarginChart(cos, yrs);
+  renderTable(DATA);
+}
+
+function renderKpiCards(cos, latest, prev){
+  const kpiGrid = $("kpiGrid");
+  kpiGrid.innerHTML = "";
+  cos.forEach(co=>{
+    const cur = byCoYear(co, latest);
+    const prevRec = prev ? byCoYear(co, prev) : null;
+    if(!cur) return;
+    const growth = (curV,prevV) => (curV==null||prevV==null||prevV===0) ? null : (curV-prevV)/Math.abs(prevV)*100;
+    const revG = prevRec ? growth(cur["매출액"], prevRec["매출액"]) : null;
+    const opG = prevRec ? growth(cur["영업이익"], prevRec["영업이익"]) : null;
+
+    const card = document.createElement("div");
+    card.className = "kpi-card";
+    card.style.setProperty("--company-color", COLOR[co]);
+    card.innerHTML = `
+      <div class="co-name"><span class="co-dot"></span>${co} <span class="co-code">${cur["corp_code"]}</span></div>
+      <ul class="kpi-list">
+        <li><span class="label">매출액</span><span class="value big">${fmtJo(jo(cur["매출액"]))}${revG!=null?`<span class="delta ${revG>=0?'up':'down'}">${revG>=0?'▲':'▼'} ${Math.abs(revG).toFixed(1)}%</span>`:''}</span></li>
+        <li><span class="label">영업이익</span><span class="value">${fmtJo(jo(cur["영업이익"]))}${opG!=null?`<span class="delta ${opG>=0?'up':'down'}">${opG>=0?'▲':'▼'} ${Math.abs(opG).toFixed(1)}%</span>`:''}</span></li>
+        <li><span class="label">당기순이익</span><span class="value">${fmtJo(jo(cur["당기순이익"]))}</span></li>
+        <li><span class="label">부채비율</span><span class="value">${cur["부채비율(%)"]!=null?cur["부채비율(%)"].toFixed(1)+'%':'—'}</span></li>
+      </ul>`;
+    kpiGrid.appendChild(card);
+  });
+}
+
+function renderRevenueChart(cos, yrs){
+  const svg = $("revChart");
   const W=460,H=220,padL=34,padR=10,padT=10,padB=28;
   const plotW=W-padL-padR, plotH=H-padT-padB;
-  const maxVal = Math.max(...DATA.map(d=>jo(d["매출액"])||0)) * 1.12;
-  const groupW = plotW/YEARS.length;
-  const barW = 20, gap=6;
+  const allVals = DATA.map(d=>jo(d["매출액"])||0);
+  const maxVal = (Math.max(...allVals, 0) || 1) * 1.12;
+  const groupW = plotW/yrs.length;
+  const barW = Math.min(20, (groupW-10)/cos.length);
+  const gap = 6;
   let svgContent = "";
 
   const steps=4;
@@ -296,34 +574,32 @@ COMPANIES.forEach(co=>{
     svgContent += `<text class="axis-label" x="${padL-6}" y="${y+3}" text-anchor="end">${v.toFixed(0)}</text>`;
   }
 
-  YEARS.forEach((yr,gi)=>{
-    const groupX = padL + groupW*gi + groupW/2 - (barW*3+gap*2)/2;
-    COMPANIES.forEach((co,ci)=>{
+  yrs.forEach((yr,gi)=>{
+    const groupX = padL + groupW*gi + groupW/2 - (barW*cos.length+gap*(cos.length-1))/2;
+    cos.forEach((co,ci)=>{
       const rec = byCoYear(co,yr);
-      const v = jo(rec["매출액"])||0;
+      const v = rec ? (jo(rec["매출액"])||0) : 0;
       const bh = (v/maxVal)*plotH;
       const x = groupX + ci*(barW+gap);
       const y = padT+plotH-bh;
-      svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="${COLOR[co]}" rx="2"/>`;
+      if(rec) svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="${COLOR[co]}" rx="2"/>`;
     });
     svgContent += `<text class="axis-label" x="${padL+groupW*gi+groupW/2}" y="${H-8}" text-anchor="middle">${yr}</text>`;
   });
   svgContent += `<line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="var(--border)" stroke-width="1.5"/>`;
   svg.innerHTML = svgContent;
+  $("revLegend").innerHTML = cos.map(co=>`<span><i style="background:${COLOR[co]}"></i>${co}</span>`).join("");
+}
 
-  const legend = document.getElementById("revLegend");
-  legend.innerHTML = COMPANIES.map(co=>`<span><i style="background:${COLOR[co]}"></i>${co}</span>`).join("");
-})();
-
-/* ---------- Operating margin line chart ---------- */
-(function(){
-  const svg = document.getElementById("marginChart");
+function renderMarginChart(cos, yrs){
+  const svg = $("marginChart");
   const W=400,H=220,padL=38,padR=14,padT=14,padB=28;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const vals = DATA.map(d=>d["영업이익률(%)"]).filter(v=>v!=null);
-  const minV = Math.min(...vals,0)*1.15, maxV=Math.max(...vals)*1.15;
-  const range = maxV-minV;
-  const xFor = yr => padL + (YEARS.indexOf(yr)/(YEARS.length-1))*plotW;
+  const minV = Math.min(...vals,0)*1.15 || -10;
+  const maxV = (Math.max(...vals,0)*1.15) || 10;
+  const range = maxV-minV || 1;
+  const xFor = yr => yrs.length>1 ? padL + (yrs.indexOf(yr)/(yrs.length-1))*plotW : padL+plotW/2;
   const yFor = v => padT + plotH - ((v-minV)/range)*plotH;
 
   let svgContent="";
@@ -339,37 +615,34 @@ COMPANIES.forEach(co=>{
     svgContent += `<line x1="${padL}" y1="${y0}" x2="${W-padR}" y2="${y0}" stroke="var(--ink-muted)" stroke-width="1" stroke-dasharray="3,3"/>`;
   }
 
-  COMPANIES.forEach(co=>{
-    const pts = YEARS.map(yr=>{
+  cos.forEach(co=>{
+    const pts = yrs.map(yr=>{
       const rec = byCoYear(co,yr);
-      const v = rec["영업이익률(%)"];
+      const v = rec ? rec["영업이익률(%)"] : null;
       return v==null ? null : [xFor(yr), yFor(v)];
     }).filter(p=>p);
+    if(pts.length===0) return;
     const path = pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
     svgContent += `<path d="${path}" fill="none" stroke="${COLOR[co]}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>`;
-    pts.forEach(p=>{
-      svgContent += `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${COLOR[co]}"/>`;
-    });
+    pts.forEach(p=>{ svgContent += `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${COLOR[co]}"/>`; });
     const last = pts[pts.length-1];
     svgContent += `<circle cx="${last[0]}" cy="${last[1]}" r="5" fill="none" stroke="${COLOR[co]}" stroke-width="1.5"/>`;
   });
 
-  YEARS.forEach(yr=>{
+  yrs.forEach(yr=>{
     svgContent += `<text class="axis-label" x="${xFor(yr)}" y="${H-8}" text-anchor="middle">${yr}</text>`;
   });
   svg.innerHTML = svgContent;
+  $("marginLegend").innerHTML = cos.map(co=>`<span><i style="background:${COLOR[co]}"></i>${co}</span>`).join("");
+}
 
-  const legend = document.getElementById("marginLegend");
-  legend.innerHTML = COMPANIES.map(co=>`<span><i style="background:${COLOR[co]}"></i>${co}</span>`).join("");
-})();
-
-/* ---------- Table ---------- */
+/* ---------- table ---------- */
 const COLS = ["회사명","연도","재무제표구분","매출액","영업이익","당기순이익","자산총계","부채총계","자본총계","영업이익률(%)","순이익률(%)","부채비율(%)","ROE(%)","ROA(%)"];
 const MONEY_COLS = new Set(["매출액","영업이익","당기순이익","자산총계","부채총계","자본총계"]);
 const PCT_COLS = new Set(["영업이익률(%)","순이익률(%)","부채비율(%)","ROE(%)","ROA(%)"]);
 
 function renderTable(rows){
-  const tbody = document.getElementById("dataBody");
+  const tbody = $("dataBody");
   tbody.innerHTML = rows.map(r=>{
     const cells = COLS.map(k=>{
       let v = r[k];
@@ -392,11 +665,11 @@ function renderTable(rows){
     return `<tr>${cells}</tr>`;
   }).join("");
 }
-renderTable(DATA);
 
 let sortState = {key:null, dir:1};
 document.querySelectorAll("#dataTable thead th").forEach(th=>{
   th.addEventListener("click", ()=>{
+    if(DATA.length===0) return;
     const key = th.dataset.key, type = th.dataset.type;
     sortState.dir = (sortState.key===key) ? -sortState.dir : 1;
     sortState.key = key;

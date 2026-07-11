@@ -1,5 +1,7 @@
 financial_analyzer.py
 재무분석기_실행.bat
+dev_server.py
+scripts/
 corpCode_cache.json
 *.xlsx
 __pycache__/
