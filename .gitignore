@@ -1,0 +1,24 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# regenerable cache
+corpCode_cache.json
+
+# generated output
+재무분석_비교결과_*.xlsx
+
+# vercel
+.vercel
+
+# claude code local settings
+.claude/settings.local.json
+
+# unrelated study materials (not part of the dart-dashboard project)
+FDA2급_1회_기출문제/
+FDA2급_2회_기출문제/
+재무빅데이터분석사(2급)/
+예제파일 및 저장 위치.xlsx

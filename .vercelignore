@@ -1,0 +1,8 @@
+financial_analyzer.py
+재무분석기_실행.bat
+corpCode_cache.json
+*.xlsx
+__pycache__/
+FDA2급_1회_기출문제/
+FDA2급_2회_기출문제/
+재무빅데이터분석사(2급)/
