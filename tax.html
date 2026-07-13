@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>세무조정 시뮬레이터 — DART Open API</title>
+<style>
+  :root{
+    --bg:#F2F4F6;
+    --surface:#FFFFFF;
+    --surface-alt:#F4F6F8;
+    --ink:#191F28;
+    --ink-muted:#6B7684;
+    --border:#E5E8EB;
+    --accent:#3182F6;
+    --accent-soft:#EBF2FE;
+    --pos:#00C471;
+    --neg:#F04452;
+    --shadow: 0 2px 6px rgba(25,31,40,0.04), 0 8px 20px -10px rgba(25,31,40,0.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0A0C10; --surface:#191F28; --surface-alt:#20272F; --ink:#F2F4F6; --ink-muted:#8B95A1;
+      --border:#2A313C; --accent:#4593FC; --accent-soft:#1C2B44;
+      --pos:#2ED890; --neg:#FF6B6B;
+      --shadow: 0 2px 6px rgba(0,0,0,0.35), 0 8px 20px -10px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A0C10; --surface:#191F28; --surface-alt:#20272F; --ink:#F2F4F6; --ink-muted:#8B95A1;
+    --border:#2A313C; --accent:#4593FC; --accent-soft:#1C2B44;
+    --pos:#2ED890; --neg:#FF6B6B;
+    --shadow: 0 2px 6px rgba(0,0,0,0.35), 0 8px 20px -10px rgba(0,0,0,0.5);
+  }
+  :root[data-theme="light"]{
+    --bg:#F2F4F6; --surface:#FFFFFF; --surface-alt:#F4F6F8; --ink:#191F28; --ink-muted:#6B7684;
+    --border:#E5E8EB; --accent:#3182F6; --accent-soft:#EBF2FE;
+    --pos:#00C471; --neg:#F04452;
+    --shadow: 0 2px 6px rgba(25,31,40,0.04), 0 8px 20px -10px rgba(25,31,40,0.08);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,"Segoe UI",sans-serif;
+    font-variant-numeric: tabular-nums;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+  button{font-family:inherit;}
+  a{color:var(--accent);}
+
+  .wrap{max-width:840px; margin:0 auto; padding:48px 24px 64px;}
+
+  header.masthead{display:flex; flex-direction:column; gap:10px; padding-bottom:8px; margin-bottom:32px;}
+  .eyebrow{
+    display:inline-flex; width:fit-content; font-size:12.5px; letter-spacing:-.01em;
+    color:var(--accent); font-weight:700; background:var(--accent-soft); padding:5px 12px; border-radius:999px;
+  }
+  h1{margin:0; font-size:clamp(26px,3.6vw,34px); font-weight:800; letter-spacing:-.02em; text-wrap:balance;}
+  .subtitle{color:var(--ink-muted); font-size:15px; margin-top:2px; font-weight:500;}
+  .nav-link{font-size:13.5px; font-weight:700; text-decoration:none; margin-top:6px;}
+  .nav-link:hover{text-decoration:underline;}
+
+  section{margin-bottom:28px;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; gap:12px; flex-wrap:wrap;}
+  .section-head h2{font-size:16px; margin:0; font-weight:700;}
+  .section-head .hint{font-size:12.5px; color:var(--ink-muted);}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:24px; box-shadow:var(--shadow);
+  }
+
+  /* ---- company search ---- */
+  .search-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+  .search-box{position:relative; flex:1 1 260px; min-width:220px;}
+  .search-box input[type="text"]{
+    width:100%; padding:12px 16px; font-size:15px; border-radius:14px;
+    border:1px solid var(--border); background:var(--surface-alt); color:var(--ink);
+    outline:none; font-weight:500; transition:border-color .12s ease, background .12s ease;
+  }
+  .search-box input[type="text"]:focus{border-color:var(--accent); background:var(--surface);}
+  .suggestions{
+    position:absolute; left:0; right:0; top:calc(100% + 8px); z-index:20;
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    box-shadow:var(--shadow); max-height:280px; overflow-y:auto; display:none; padding:6px;
+  }
+  .suggestions.open{display:block;}
+  .suggestion-item{display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 12px; cursor:pointer; font-size:14px; border-radius:10px; font-weight:500;}
+  .suggestion-item:hover, .suggestion-item.active{background:var(--accent-soft);}
+  .suggestion-item .code{color:var(--ink-muted); font-size:11.5px;}
+  .suggestion-empty{padding:14px; font-size:13px; color:var(--ink-muted);}
+  .year-fields{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-muted); font-weight:600;}
+  .year-fields input{width:76px; padding:12px 10px; font-size:15px; border-radius:14px; border:1px solid var(--border); background:var(--surface-alt); color:var(--ink); text-align:center; font-weight:600;}
+  .btn-primary{padding:12px 22px; font-size:15px; font-weight:700; border-radius:14px; border:none; background:var(--accent); color:#fff; cursor:pointer; transition:filter .12s ease, transform .05s ease;}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-primary:not(:disabled):hover{filter:brightness(1.06);}
+  .btn-primary:not(:disabled):active{transform:scale(.98);}
+  .picked-co{display:flex; align-items:center; gap:8px; margin-top:14px; font-size:13.5px; font-weight:700;}
+  .picked-co .code{color:var(--ink-muted); font-weight:500; font-size:11.5px;}
+  .picked-co .revenue{margin-left:auto; font-size:13px; color:var(--ink-muted); font-weight:600;}
+  .search-hint{font-size:12.5px; color:var(--ink-muted); margin-top:12px; font-weight:500;}
+  .status-line{font-size:12.5px; color:var(--ink-muted); margin-top:10px; font-weight:600;}
+  .status-line.error{color:var(--neg);}
+
+  /* ---- item cards ---- */
+  .item-card{margin-bottom:16px;}
+  .item-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px;}
+  .item-head h3{margin:0; font-size:16px; font-weight:800; letter-spacing:-.01em;}
+  .item-head .law-link{font-size:12px; font-weight:700; text-decoration:none; white-space:nowrap; background:var(--accent-soft); color:var(--accent); border:none; border-radius:999px; padding:6px 12px; cursor:pointer;}
+  .item-head .law-link:hover{filter:brightness(1.06);}
+
+  .law-panel{display:none; margin:-4px 0 16px; padding:14px 16px; border-radius:14px; background:var(--surface-alt); border:1px solid var(--border); font-size:13px;}
+  .law-panel.open{display:block;}
+  .law-panel h4{margin:0 0 8px; font-size:13.5px; font-weight:800;}
+  .law-panel p{margin:0 0 6px; color:var(--ink-muted); line-height:1.6;}
+  .law-panel p:last-child{margin-bottom:0;}
+  .law-panel .law-status{color:var(--ink-muted); font-weight:600;}
+  .law-panel .law-status.error{color:var(--neg);}
+  .law-panel .law-source{display:inline-block; margin-top:10px; font-size:11.5px; font-weight:700; text-decoration:none;}
+  .law-panel .law-source:hover{text-decoration:underline;}
+
+  .field-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px 16px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:12.5px; color:var(--ink-muted); font-weight:700;}
+  .field input[type="number"], .field input[type="text"]{
+    padding:11px 13px; font-size:14.5px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--ink); font-weight:600; outline:none;
+  }
+  .field input:focus{border-color:var(--accent); background:var(--surface);}
+  .field .unit{font-size:11px; color:var(--ink-muted); font-weight:500;}
+  .checkbox-field{flex-direction:row; align-items:center; gap:8px;}
+  .checkbox-field input{width:16px; height:16px;}
+  .checkbox-field label{font-size:13.5px; color:var(--ink); font-weight:600;}
+
+  .result{margin-top:18px; padding-top:16px; border-top:1px dashed var(--border);}
+  .basis-list{list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .basis-list li{display:flex; justify-content:space-between; font-size:13px; color:var(--ink-muted); font-weight:500;}
+  .basis-list li .v{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums;}
+  .excess-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px; border-radius:14px; background:var(--surface-alt);
+  }
+  .excess-banner.has-excess{background:color-mix(in srgb, var(--neg) 10%, var(--surface-alt));}
+  .excess-banner .label{font-size:13.5px; font-weight:700;}
+  .excess-banner .amount{font-size:19px; font-weight:800; letter-spacing:-.01em;}
+  .excess-banner.has-excess .amount{color:var(--neg);}
+  .excess-banner .amount.zero{color:var(--pos);}
+  .disposal-tag{font-size:10.5px; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-weight:700; margin-left:8px;}
+
+  /* ---- summary ---- */
+  .table-scroll{overflow-x:auto;}
+  .summary-table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:420px;}
+  .summary-table th{text-align:left; color:var(--ink-muted); font-weight:700; font-size:11.5px; padding:8px 10px; border-bottom:1px solid var(--border);}
+  .summary-table td{padding:10px; border-bottom:1px solid var(--border); font-weight:600;}
+  .summary-table tr:last-child td{border-bottom:none;}
+  .summary-table td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .summary-total{display:flex; justify-content:space-between; align-items:baseline; margin-top:16px; padding-top:14px; border-top:1px solid var(--border);}
+  .summary-total .label{font-size:14px; font-weight:700; color:var(--ink-muted);}
+  .summary-total .amount{font-size:24px; font-weight:800; letter-spacing:-.02em; color:var(--neg);}
+
+  footer{margin-top:36px; padding-top:16px; border-top:1px solid var(--border); font-size:11.5px; color:var(--ink-muted); display:flex; flex-direction:column; gap:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Tax Adjustment Simulator · DART Open API</div>
+    <h1>세무조정 시뮬레이터</h1>
+    <div class="subtitle">회사를 검색해 매출액을 불러오고, 대표 세무조정 항목 4가지의 한도초과액을 계산합니다.</div>
+    <a class="nav-link" href="index.html">← 재무제표 비교로 돌아가기</a>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <h2>회사 검색</h2>
+      <span class="hint" id="corpListStatus">상장사 목록 불러오는 중…</span>
+    </div>
+    <div class="card">
+      <div class="search-row">
+        <div class="search-box">
+          <label for="searchInput" class="sr-only">회사명 검색</label>
+          <input type="text" id="searchInput" placeholder="회사명을 입력하세요 (예: 삼성전자)" autocomplete="off" disabled>
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+        <div class="year-fields">
+          <span>사업연도</span>
+          <input type="number" id="fiscalYear" aria-label="사업연도">
+        </div>
+        <button class="btn-primary" id="loadBtn" disabled>매출액 불러오기</button>
+      </div>
+      <div class="picked-co" id="pickedCo" style="display:none;">
+        <span class="co-dot"></span>
+        <span id="pickedName"></span> <span class="code" id="pickedCode"></span>
+        <span class="revenue" id="pickedRevenue"></span>
+      </div>
+      <div class="status-line" id="loadStatus"></div>
+      <div class="search-hint">불러온 매출액은 기업업무추진비 한도 계산의 수입금액으로 자동 반영되며, 아래에서 직접 수정할 수도 있습니다.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>세무조정 항목</h2>
+      <span class="hint">모든 금액은 입력 즉시 자동 계산됩니다</span>
+    </div>
+
+    <!-- 1. 기업업무추진비 -->
+    <div class="card item-card" id="card-entertainment">
+      <div class="item-head">
+        <h3>① 기업업무추진비(접대비) 한도초과액</h3>
+        <button type="button" class="law-link" data-law-item="entertainment">근거 조문 보기</button>
+      </div>
+      <div class="law-panel" id="lawpanel-entertainment"></div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="ent-revenue">수입금액 (억원)</label>
+          <input type="number" id="ent-revenue" placeholder="예: 3000">
+        </div>
+        <div class="field">
+          <label for="ent-spent">실제 지출액 (만원)</label>
+          <input type="number" id="ent-spent" placeholder="예: 5000">
+        </div>
+        <div class="field">
+          <label for="ent-months">사업연도 월수</label>
+          <input type="number" id="ent-months" value="12" min="1" max="12">
+        </div>
+        <div class="field checkbox-field" style="align-self:end;">
+          <input type="checkbox" id="ent-small">
+          <label for="ent-small">중소기업 (기본한도 3,600만원)</label>
+        </div>
+      </div>
+      <div class="result" id="result-entertainment"></div>
+    </div>
+
+    <!-- 2. 감가상각비 -->
+    <div class="card item-card" id="card-depreciation">
+      <div class="item-head">
+        <h3>② 감가상각비 시부인</h3>
+        <button type="button" class="law-link" data-law-item="depreciation">근거 조문 보기</button>
+      </div>
+      <div class="law-panel" id="lawpanel-depreciation"></div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="dep-cost">세무상 취득가액 (억원)</label>
+          <input type="number" id="dep-cost" placeholder="예: 100">
+        </div>
+        <div class="field">
+          <label for="dep-rate">세법상 상각률 (%)</label>
+          <input type="number" id="dep-rate" placeholder="예: 20 (내용연수 5년)">
+        </div>
+        <div class="field">
+          <label for="dep-book">회사 계상 감가상각비 (만원)</label>
+          <input type="number" id="dep-book" placeholder="예: 2500">
+        </div>
+      </div>
+      <div class="result" id="result-depreciation"></div>
+    </div>
+
+    <!-- 3. 대손충당금 -->
+    <div class="card item-card" id="card-baddebt">
+      <div class="item-head">
+        <h3>③ 대손충당금 한도초과액</h3>
+        <button type="button" class="law-link" data-law-item="badDebt">근거 조문 보기</button>
+      </div>
+      <div class="law-panel" id="lawpanel-badDebt"></div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="bd-receivables">세무상 채권잔액 (억원)</label>
+          <input type="number" id="bd-receivables" placeholder="예: 50">
+        </div>
+        <div class="field">
+          <label for="bd-actualrate">대손실적률 (%)</label>
+          <input type="number" id="bd-actualrate" placeholder="예: 0.8">
+        </div>
+        <div class="field">
+          <label for="bd-book">회사 설정액 (만원)</label>
+          <input type="number" id="bd-book" placeholder="예: 6000">
+        </div>
+      </div>
+      <div class="result" id="result-badDebt"></div>
+    </div>
+
+    <!-- 4. 기부금 -->
+    <div class="card item-card" id="card-donation">
+      <div class="item-head">
+        <h3>④ 기부금 한도초과액</h3>
+        <button type="button" class="law-link" data-law-item="donation">근거 조문 보기</button>
+      </div>
+      <div class="law-panel" id="lawpanel-donation"></div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="don-income">기준소득금액 (억원)</label>
+          <input type="number" id="don-income" placeholder="예: 20">
+        </div>
+        <div class="field">
+          <label for="don-special">특례기부금 (만원)</label>
+          <input type="number" id="don-special" placeholder="예: 500">
+        </div>
+        <div class="field">
+          <label for="don-general">일반기부금 (만원)</label>
+          <input type="number" id="don-general" placeholder="예: 300">
+        </div>
+      </div>
+      <div class="result" id="result-donation"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>세무조정 요약</h2>
+      <span class="hint">항목별 손금불산입액과 소득처분</span>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+        <table class="summary-table">
+          <thead>
+            <tr><th>항목</th><th>소득처분</th><th style="text-align:right;">한도초과액</th></tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+      <div class="summary-total">
+        <span class="label">총 손금불산입액</span>
+        <span class="amount" id="summaryTotal">0원</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>ⓘ 감가상각비는 정액법 단순 가정, 기부금은 특례·일반 2분류 기준으로 계산합니다. 실제 세무조정은 정률법·준비금·특수관계자 거래 등 추가 변수를 고려해야 합니다.</div>
+    <div>본 도구는 학습·연습 목적으로 제작되었으며, 실제 세무신고의 근거로 사용할 수 없습니다.</div>
+  </footer>
+</div>
+
+<script src="tax-rules.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const searchInput = $("searchInput");
+const suggestionsEl = $("suggestions");
+const loadBtn = $("loadBtn");
+const fiscalYearInput = $("fiscalYear");
+
+let corpList = [];
+let picked = null;       // {corp_name, corp_code, stock_code}
+let activeSuggestionIndex = -1;
+let lastResults = {};    // { entertainment: {...}, depreciation: {...}, badDebt: {...}, donation: {...} }
+
+(function initYear(){
+  fiscalYearInput.value = new Date().getFullYear() - 1;
+})();
+
+const lawTextCache = {};
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function toggleLawPanel(key){
+  const panel = document.getElementById(`lawpanel-${key}`);
+  const ref = LAW_LINKS[key];
+  if(!panel || !ref) return;
+
+  const isOpen = panel.classList.contains("open");
+  if(isOpen){ panel.classList.remove("open"); return; }
+  panel.classList.add("open");
+
+  if(lawTextCache[key]){
+    panel.innerHTML = lawTextCache[key];
+    return;
+  }
+
+  panel.innerHTML = `<p class="law-status">법제처 국가법령정보센터에서 원문을 불러오는 중…</p>`;
+  try{
+    const r = await fetch(`/api/lawtext?law=${encodeURIComponent(ref.law)}&jo=${encodeURIComponent(ref.jo)}`);
+    const body = await r.json();
+    if(!r.ok) throw new Error(body.error || "조회 실패");
+    const html = `
+      <h4>제${escapeHtml(body.jo)}조 (${escapeHtml(body.title)})</h4>
+      ${body.lines.map(line => `<p>${escapeHtml(line)}</p>`).join("")}
+      <a class="law-source" href="${ref.url}" target="_blank" rel="noopener">law.go.kr에서 원문 보기 ↗</a>`;
+    lawTextCache[key] = html;
+    panel.innerHTML = html;
+  } catch(err){
+    panel.innerHTML = `
+      <p class="law-status error">원문을 불러오지 못했습니다: ${escapeHtml(err.message || err)}</p>
+      <a class="law-source" href="${ref.url}" target="_blank" rel="noopener">law.go.kr에서 직접 보기 ↗</a>`;
+  }
+}
+
+document.querySelectorAll("[data-law-item]").forEach(btn => {
+  btn.addEventListener("click", () => toggleLawPanel(btn.dataset.lawItem));
+});
+
+fetch("corp_list.json")
+  .then(r => r.json())
+  .then(list => {
+    corpList = list;
+    searchInput.disabled = false;
+    $("corpListStatus").textContent = `상장사 ${list.length.toLocaleString("ko-KR")}곳 검색 가능`;
+  })
+  .catch(() => {
+    $("corpListStatus").textContent = "상장사 목록을 불러오지 못했습니다. 새로고침해 주세요.";
+  });
+
+function renderSuggestions(items){
+  activeSuggestionIndex = -1;
+  if(items.length === 0){
+    suggestionsEl.innerHTML = `<div class="suggestion-empty">검색 결과가 없습니다.</div>`;
+    suggestionsEl.classList.add("open");
+    return;
+  }
+  suggestionsEl.innerHTML = items.map((c,i) => `
+    <div class="suggestion-item" data-idx="${i}" role="option">
+      <span>${c[0]}</span><span class="code">${c[2]}</span>
+    </div>`).join("");
+  suggestionsEl.classList.add("open");
+  suggestionsEl._items = items;
+}
+
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.trim();
+  if(q.length === 0){ suggestionsEl.classList.remove("open"); return; }
+  const qLower = q.toLowerCase();
+  const matches = corpList.filter(c => c[0].toLowerCase().includes(qLower)).slice(0, 8);
+  renderSuggestions(matches);
+});
+
+searchInput.addEventListener("focus", () => {
+  if(searchInput.value.trim() && suggestionsEl.innerHTML) suggestionsEl.classList.add("open");
+});
+
+document.addEventListener("click", (e) => {
+  if(!e.target.closest(".search-box")) suggestionsEl.classList.remove("open");
+});
+
+suggestionsEl.addEventListener("click", (e) => {
+  const item = e.target.closest(".suggestion-item");
+  if(!item) return;
+  const idx = Number(item.dataset.idx);
+  const p = suggestionsEl._items[idx];
+  if(p) pickCompany(p);
+});
+
+searchInput.addEventListener("keydown", (e) => {
+  const items = suggestionsEl.querySelectorAll(".suggestion-item");
+  if(e.key === "ArrowDown"){
+    e.preventDefault();
+    activeSuggestionIndex = Math.min(activeSuggestionIndex+1, items.length-1);
+    items.forEach((el,i)=>el.classList.toggle("active", i===activeSuggestionIndex));
+  } else if(e.key === "ArrowUp"){
+    e.preventDefault();
+    activeSuggestionIndex = Math.max(activeSuggestionIndex-1, 0);
+    items.forEach((el,i)=>el.classList.toggle("active", i===activeSuggestionIndex));
+  } else if(e.key === "Enter"){
+    e.preventDefault();
+    if(activeSuggestionIndex >= 0 && suggestionsEl._items[activeSuggestionIndex]){
+      pickCompany(suggestionsEl._items[activeSuggestionIndex]);
+    }
+  } else if(e.key === "Escape"){
+    suggestionsEl.classList.remove("open");
+  }
+});
+
+function pickCompany(entry){
+  const [corp_name, corp_code, stock_code] = entry;
+  picked = {corp_name, corp_code, stock_code};
+  searchInput.value = "";
+  suggestionsEl.classList.remove("open");
+  $("pickedCo").style.display = "flex";
+  $("pickedName").textContent = corp_name;
+  $("pickedCode").textContent = stock_code;
+  $("pickedRevenue").textContent = "";
+  loadBtn.disabled = false;
+}
+
+loadBtn.addEventListener("click", async () => {
+  if(!picked) return;
+  const year = parseInt(fiscalYearInput.value, 10);
+  if(!year){ setLoadStatus("사업연도를 입력해 주세요.", true); return; }
+
+  loadBtn.disabled = true;
+  setLoadStatus("DART에서 매출액을 불러오는 중…", false);
+
+  try{
+    const r = await fetch(`/api/financials?corp_code=${encodeURIComponent(picked.corp_code)}&corp_name=${encodeURIComponent(picked.corp_name)}&start=${year}&end=${year}`);
+    const body = await r.json();
+    if(!r.ok) throw new Error(body.error || "조회 실패");
+    const record = (body.records || [])[0];
+    if(!record || record["매출액"] == null){
+      setLoadStatus("해당 연도의 매출액 데이터를 찾지 못했습니다. 수입금액을 직접 입력해 주세요.", true);
+      return;
+    }
+    const revenueWon = record["매출액"];
+    $("pickedRevenue").textContent = `매출액 ${(revenueWon/1e8).toLocaleString("ko-KR",{maximumFractionDigits:0})}억원`;
+    $("ent-revenue").value = Math.round(revenueWon/1e8);
+    setLoadStatus("불러오기 완료. 아래 ①번 수입금액에 반영했습니다.", false);
+    recalcAll();
+  } catch(err){
+    setLoadStatus(err.message || String(err), true);
+  } finally{
+    loadBtn.disabled = false;
+  }
+});
+
+function setLoadStatus(msg, isError){
+  const el = $("loadStatus");
+  el.textContent = msg;
+  el.classList.toggle("error", !!isError);
+}
+
+/* ---------- unit helpers ---------- */
+const eok = (v) => (Number(v) || 0) * 1e8;   // 억원 -> 원
+const man = (v) => (Number(v) || 0) * 1e4;   // 만원 -> 원
+const pct = (v) => (Number(v) || 0) / 100;   // % -> 비율
+
+function fmtWon(v){
+  if(v == null || Number.isNaN(v)) return "—";
+  const rounded = Math.round(v);
+  return rounded.toLocaleString("ko-KR") + "원";
+}
+
+/* ---------- render result blocks ---------- */
+function renderResult(containerId, res){
+  const el = $(containerId);
+  const hasExcess = res.excess > 0;
+  el.innerHTML = `
+    <ul class="basis-list">
+      ${res.basis.map(b => `<li><span>${b.label}</span><span class="v">${b.isRate ? (b.value*100).toFixed(2)+"%" : fmtWon(b.value)}</span></li>`).join("")}
+    </ul>
+    <div class="excess-banner ${hasExcess ? "has-excess" : ""}">
+      <span class="label">한도초과액(손금불산입)</span>
+      <span class="amount ${hasExcess ? "" : "zero"}">${fmtWon(res.excess)}</span>
+    </div>`;
+}
+
+function recalcAll(){
+  const ent = entertainmentLimit({
+    revenue: eok($("ent-revenue").value),
+    isSmallBiz: $("ent-small").checked,
+    spent: man($("ent-spent").value),
+    months: Number($("ent-months").value) || 12,
+  });
+  renderResult("result-entertainment", ent);
+  lastResults.entertainment = ent;
+
+  const dep = depreciationDisqualified({
+    acquisitionCost: eok($("dep-cost").value),
+    rate: pct($("dep-rate").value),
+    bookDepreciation: man($("dep-book").value),
+  });
+  renderResult("result-depreciation", dep);
+  lastResults.depreciation = dep;
+
+  const bd = badDebtReserveLimit({
+    receivables: eok($("bd-receivables").value),
+    bookReserve: man($("bd-book").value),
+    actualRate: pct($("bd-actualrate").value),
+  });
+  renderResult("result-badDebt", bd);
+  lastResults.badDebt = bd;
+
+  const don = donationLimit({
+    adjustedIncome: eok($("don-income").value),
+    specialDonation: man($("don-special").value),
+    generalDonation: man($("don-general").value),
+  });
+  renderResult("result-donation", don);
+  lastResults.donation = don;
+
+  renderSummary();
+}
+
+function renderSummary(){
+  const rows = [
+    { name: "① 기업업무추진비", disposal: "기타사외유출", res: lastResults.entertainment },
+    { name: "② 감가상각비", disposal: "유보", res: lastResults.depreciation },
+    { name: "③ 대손충당금", disposal: "유보", res: lastResults.badDebt },
+    { name: "④ 기부금", disposal: "기타사외유출", res: lastResults.donation },
+  ];
+  $("summaryBody").innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td><span class="disposal-tag">${r.disposal}</span></td>
+      <td class="num">${fmtWon(r.res ? r.res.excess : 0)}</td>
+    </tr>`).join("");
+  const total = rows.reduce((sum, r) => sum + (r.res ? r.res.excess : 0), 0);
+  $("summaryTotal").textContent = fmtWon(total);
+}
+
+document.querySelectorAll('.field input[type="number"]').forEach(input => {
+  input.addEventListener("input", recalcAll);
+});
+document.getElementById("ent-small").addEventListener("change", recalcAll);
+
+recalcAll();
+</script>
+</body>
+</html>

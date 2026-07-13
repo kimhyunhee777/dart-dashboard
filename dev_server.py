@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "api"))
 from dotenv import load_dotenv
 load_dotenv()
 
-from financials import handle_request  # noqa: E402
+from financials import handle_request as handle_financials  # noqa: E402
+from lawtext import handle_request as handle_lawtext  # noqa: E402
 
 
 class DevHandler(SimpleHTTPRequestHandler):
@@ -24,7 +25,12 @@ class DevHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/financials":
             query = parse_qs(parsed.query)
-            status, payload = handle_request(query, os.environ.get("DART_API_KEY"))
+            status, payload = handle_financials(query, os.environ.get("DART_API_KEY"))
+            self._send_json(payload, status)
+            return
+        if parsed.path == "/api/lawtext":
+            query = parse_qs(parsed.query)
+            status, payload = handle_lawtext(query, os.environ.get("LAW_API_OC"))
             self._send_json(payload, status)
             return
         super().do_GET()
